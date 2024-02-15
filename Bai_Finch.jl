@@ -20,13 +20,16 @@ r_mat2 = [[-(7 + 24im)/36, -121/144], [-1/9, (-7 + 24im)/36]]
 g_mat = (1/12)*[[2-2im,-1-5im],[4-4im,-2-10im]]
 
 # ╔═╡ aa71d4ec-94aa-4b43-a6cb-1361948d9dc7
-Nc = 2
+Nc = 9
 
 # ╔═╡ 6a94dbda-1ee4-484c-a7cf-2c58aba99ef5
-Lc = 10
+Lc = 20
 
 # ╔═╡ 84fcb6c5-dcb7-49d4-95d8-33aabe5a5a55
-k0 = 80
+k0 = 100
+
+# ╔═╡ 5afdaf31-2bfe-4b1f-8991-a36e1dba5811
+print(secant())
 
 # ╔═╡ c8f312cf-b086-4307-8a06-7ff3ef762a56
 "Computes the binomial coefficient with a real-valued r"
@@ -194,9 +197,6 @@ function secant()
     end
     error("Max iteration exceeded")
 end
-
-# ╔═╡ 5afdaf31-2bfe-4b1f-8991-a36e1dba5811
-print(secant())
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -434,6 +434,7 @@ version = "17.4.0+0"
 # ╠═aa71d4ec-94aa-4b43-a6cb-1361948d9dc7
 # ╠═6a94dbda-1ee4-484c-a7cf-2c58aba99ef5
 # ╠═84fcb6c5-dcb7-49d4-95d8-33aabe5a5a55
+# ╠═5afdaf31-2bfe-4b1f-8991-a36e1dba5811
 # ╠═c8f312cf-b086-4307-8a06-7ff3ef762a56
 # ╠═77576ece-4e29-46e5-8dc2-35d87ee74449
 # ╠═0c77f33d-3d6b-4fba-b80e-a5a85460c973
@@ -446,6 +447,5 @@ version = "17.4.0+0"
 # ╠═7689e15c-a631-431e-89b2-a5833e434fc4
 # ╠═69eb6d7a-d477-4fa3-825b-70e032388149
 # ╠═bb02445d-34a1-4344-a1fe-5f09cfbb7f0d
-# ╠═5afdaf31-2bfe-4b1f-8991-a36e1dba5811
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
