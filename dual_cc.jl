@@ -4,267 +4,117 @@
 using Markdown
 using InteractiveUtils
 
-# ╔═╡ ec15aafa-fb76-4004-9102-7cebe68c93d1
+# ╔═╡ e29dd721-b05a-4956-821c-7bfb50f4c833
+using Markdown
+
+# ╔═╡ 6aae1c1f-6d3a-4856-b206-4168cb817aff
 using LinearAlgebra
 
-# ╔═╡ 8a20d044-42ac-4614-89aa-a06c4af1e83f
-using SparseArrays
-
-# ╔═╡ 1980d986-1a94-4c45-b8c6-feb4399df123
+# ╔═╡ 1f431876-a98c-47a7-a5c9-e14275d34441
 using Luxor
 
-# ╔═╡ 4d3a4271-4394-4a94-a516-cff6b3675297
-struct Node
-	tuple
-	children
-	word
-	valid
-end
+# ╔═╡ fa98cb28-753f-4d42-b7b8-c4853d4976d9
+using CurveFit
 
-# ╔═╡ f63f6a13-a315-4887-897a-7559e35d17e9
-numbers = Dict()
+# ╔═╡ b90f4960-ef11-499c-b15c-211af4259f41
+inn(v, w)=-v[1]*w[2]-v[2]*w[1]+2*v[3]*w[3]+2*v[4]*w[4]
 
-# ╔═╡ 2139ffed-dba3-433e-ae66-6c15948b36f9
-whole_tree = Dict()
+# ╔═╡ 87ad8994-75f4-402a-81b4-e9f835981d46
+dual_circles=[[0, 0, 0, -1], [4, 0, 0, 1], [1,1,1,1], [1, 1,-1, 1]]
 
-# ╔═╡ b8febb46-522e-42da-8d7b-0d54d27249bb
-point_list = [0, 0+0.5im, -1*sqrt(3)/4-0.25im, sqrt(3)/4-0.25im]
+# ╔═╡ 7a4cdfff-5d18-454f-989f-6c823855ffe1
+length(dual_circles)
 
-# ╔═╡ 0c0e9037-99b0-4ea6-adae-110d4ee17b3b
-gen1 = stack([[-1.,2.,2.,2.],[0,1.,0,0],[0,0,1.,0],[0,0,0,1.]],dims=1)
+# ╔═╡ 36afb35e-5080-4bf3-9359-6fdb3f499980
+dual_circles
 
-# ╔═╡ 23ed120c-452b-4d95-9ff7-ef347bc11c0d
-gen2 = stack([[1.,0,0,0],[2.,-1.,2.,2.],[0,0,1.,0],[0,0,0,1.]],dims=1)
-
-# ╔═╡ 1fd4a0f3-2f69-4fcf-87d4-2c940edae987
-gen3 = stack([[1.,0,0,0],[0,1.,0,0],[2.,2.,-1.,2.],[0,0,0,1.]],dims=1)
-
-# ╔═╡ 8b8d0b26-5255-46e6-97da-b82faa282128
-gen4 = stack([[1.,0,0,0],[0,1.,0,0],[0,0,1.,0],[2.,2.,2.,-1.]],dims=1)
-
-# ╔═╡ 32f127fb-cbf5-4667-92dc-610193e2b655
-gen_list = [gen1, gen2, gen3, gen4]
-
-# ╔═╡ 452f4307-9a14-420f-b0c0-cf90f22370b2
-function func1(z)
-	return conj((2 - sqrt(3))^2 / z)
-end
-
-# ╔═╡ 51752925-ecb0-472d-b124-784cb49f6772
-function func2(z)
-	return 2im + conj(3 / (z - 2im))
-end
-
-# ╔═╡ 6c3ef2cd-f08b-448e-a9ee-62c3fb02dd65
-function func3(z)
-	return -1*sqrt(3) - 1im + conj(3 / (z + sqrt(3) + 1im))
-end
-
-# ╔═╡ 0d72c245-2c83-4933-920e-8c5c3ea05dea
-function func4(z)
-	return sqrt(3) - 1im + conj(3 / (z - sqrt(3) + 1im))
-end
-
-# ╔═╡ d0ce22ea-6e8f-4815-84c5-2cb21994bf6c
-func_list = [func1, func2, func3, func4]
-
-# ╔═╡ e1f8c861-4545-4694-81f6-a49c757d73dd
-function der1(z)
-	return abs(z^2 / (2 - sqrt(3))^2)
-end
-
-# ╔═╡ 32c1fb88-fc70-46aa-8c11-0e5ba921849c
-function der2(z)
-	return abs((z - 2im)^2 / 3)
-end
-
-# ╔═╡ 9e0b0873-2781-43ee-8f3a-14a69f2d0d03
-function der3(z)
-	return abs((z + sqrt(3) + 1im)^2 / 3)
-end
-
-# ╔═╡ fab98970-cd5e-47cd-a083-ce9c391deb6c
-function der4(z)
-	return abs((z - sqrt(3) + 1im)^2 / 3)
-end
-
-# ╔═╡ c1fb52eb-f5fe-4ec5-b9d8-6b08b3fe7a16
-der_list = [der1, der2, der3, der4]
-
-# ╔═╡ c4cb2d62-e407-441c-929f-eef11f3facb6
-"maps the starting sample points to their images under the given set of generators"
-function sample_point(word)
-	p = point_list[last(word)]
-    for letter in reverse(word)[2:end]
-        p = func_list[letter](p)
+# ╔═╡ fc0166cb-b746-4d5c-ab0c-2b1eb0515786
+function all_circles(max)
+	L=copy(dual_circles)
+	i=1
+	while i<=length(L)
+		c=L[i]
+		for d in dual_circles
+			A=inn(c,d)
+			if A<0&&c[1]-A*d[1]<max
+				L=push!(L,c-A*d)
+			end
+		end
+		i=i+1
 	end
-    return p
+	return L
 end
 
-# ╔═╡ dcf16831-3f44-4a9c-a9ae-8533630025b4
-"determines the value of f'_i(y_{ij})"
-function sample_value(word)
-	return der_list[word[1]](sample_point(word))
+# ╔═╡ 66f711e0-ba3f-40a3-ac7f-134ddc58af39
+ceiling = 100000
+
+# ╔═╡ 4d5bda96-f750-4fbd-a9c3-783a8106e97f
+circles = all_circles(ceiling)
+
+# ╔═╡ 3cc82a8c-9c30-475b-b3a5-be3be2c85e72
+begin
+	hist = [0 for i in 1:ceiling+1]
+	for c in circles
+		hist[abs(c[1])+1] += 1
+	end
 end
 
-# ╔═╡ e214345a-0e18-464c-96f7-30d270903698
-"determines if a tuple has too large of a dual curvature"
-function kill(tuple,g)
-	temp = deleteat!(tuple,g)
-	return sqrt(temp[1]*temp[2] + temp[1]*temp[3] + temp[2]*temp[3]) < dual_curvature
+# ╔═╡ 8696e29c-d3aa-41ad-b1c5-77724a5b6ff7
+begin
+	tot = [0 for i in 0:ceiling+1]
+	for i in 1:ceiling+1
+		tot[i+1] = tot[i]+hist[i]
+	end
 end
 
-# ╔═╡ 420ba9aa-2b9a-418c-a7ad-39480bcfb778
-"if a node is currently a leaf, attempts to generate its children"
-function spawn(leaf)
-	if !leaf.valid
-		return leaf
+# ╔═╡ 387263d7-e0ab-4a59-9b4f-e0718026c232
+begin
+	logs = [0.0 for i in 1:ceiling]
+	for i in 1:ceiling
+		logs[i]=log(tot[i+1])
+	end
+end
+
+# ╔═╡ 6b28f57c-39dd-4b55-8cf1-fd0abda740e0
+linear_fit([log(i) for i in div(ceiling,2):ceiling], [logs[i] for i in div(ceiling,2):ceiling])[2]
+
+# ╔═╡ e0d32f53-0aa1-4f54-857b-3fa3d3b05b08
+function draw_circle(v)
+	if v[1]!=0
+		circle(300*v[3]/v[1], 300*v[4]/v[1], 300/abs(v[1]), :stroke)
 	else
-		for g in 1:4
-			if length(leaf.word) == 0 || g != last(leaf.word)
-				child_word = push!(copy(leaf.word),g)
-				child = Node(gen_list[g]*leaf.tuple, [], child_word, kill(gen_list[g]*leaf.tuple,g))
-				push!(leaf.children, child)
-				whole_tree[join(child_word)] = child
-			end
-		end
+		rule(Point(150*v[2]*v[3], 150*v[2]*v[4]), atan(v[3],-v[4]))
 	end
-	return leaf
 end
 
-# ╔═╡ 0eb0b961-9682-42f7-96a9-c10f3aee3006
-function find_leaves(node)
-	current = [node]
-	new = []
-	while length(current) > 0
-		leaf = pop!(current)
-		if !leaf.valid
-			push!(new,leaf)
-		else 
-			for child in leaf.children
-				push!(current, child)
-			end
-		end
+# ╔═╡ 3b966d4f-47d1-4aac-b6b0-03d6e3948a9c
+function label(v)
+	if v[1]>0
+		text(string(v[1]), 300*v[3]/abs(v[1]), 300*v[4]/abs(v[1]), halign=:center, valign=:center)
 	end
-	return new
 end
 
-# ╔═╡ fb2847f5-c40c-4102-a63e-05d68b771231
-"generates the tree"
-function construct_tree()
-	root = Node([-1., 2+sqrt(3), 2+sqrt(3), 2+sqrt(3)],[],[],true)
-	current_leaves = [root]
-	new_leaves = []
-	while length(current_leaves)>0
-		leaf = pop!(current_leaves)
-		if !leaf.valid
-			push!(new_leaves, leaf)
-		else
-			leaf = spawn(leaf)
-			for child in leaf.children
-				push!(current_leaves, child)
-			end
-		end
+# ╔═╡ dfa426d6-639c-426e-815c-f54c2ba2a7e2
+# ╠═╡ disabled = true
+#=╠═╡
+@svg begin
+	for v in all_circles(20)
+		draw_circle(v)
+		label(v)
 	end
-	for (i,node) in enumerate(new_leaves)
-		numbers[join(node.word)] = i
-	end
-	return new_leaves
 end
-
-# ╔═╡ 3e587d05-8791-4c8d-84df-88e6b3f888f4
-"generates the data for the transition matrix"
-function construct_data()
-	data = construct_tree()
-	col = []
-	row = []
-	nonzero = []
-	for (i,node) in enumerate(data)
-		sample = whole_tree[join(node.word[2:end])]
-		for leaf in find_leaves(sample)
-			push!(row, i)
-			push!(col, numbers[join(leaf.word)])
-			push!(nonzero, sample_value(leaf.word))
-		end
-	end
-	return col, row, nonzero, length(data)
-end
-
-# ╔═╡ beffc494-2e0c-4051-9853-729224e3f41b
-function secant(x0,y0,x1,y1,z)
-	return x0 - (y0-z) * ((x1-x0)/(y1-y0))
-end
-
-# ╔═╡ c53c707b-5584-4269-9b59-85dac2bea60b
-function power_method22(col,row,data,l,a)
-	matr = sparse(col, row, data.^a)
-    vec = ones(l)
-    previous_entry = vec[1]
-    previous_val = 0
-    current = matr * vec
-    current_val = current[1] / previous_entry
-    count = 0
-    while count < 1000 && abs(current_val - previous_val) > 1e-5
-        previous_val = current_val
-        previous_entry = current[1]
-        current = matr * current
-        current_val = current[1] / previous_entry
-        count += 1
-	end
-    return current_val
-end
-
-# ╔═╡ 966e4a3e-e84c-4732-9264-22e0302e35a9
-function secant_method2(col,row,data,l,z,x1,x2,e,its)
-	k1 = x1
-	k2 = x2
-	y1 = power_method(col,row,data,l,k1)
-	y2 = power_method(col,row,data,l,k2)
-	count = 1
-	while abs(y1-z)>e && count<its
-		k3 = secant(k1,y1,k2,y2,z)
-		k1 = k2
-		y1 = y2
-		k2 = k3
-		y2 = power_method(col,row,data,l,k2)
-		count += 1
-	end
-	return count,k1,y1
-end
-
-# ╔═╡ 5080b2f3-5329-40a5-be94-52ae9364a9d2
-dual_curvature = 200
-
-# ╔═╡ 41803ad7-5ed3-402d-a8d9-75e80b0382e8
-col, row, data, l = construct_data()
-
-# ╔═╡ bf8ba11c-c87a-42e1-8b79-590b513959a7
-secant()
-
-# ╔═╡ 9313da20-a4d6-47cd-96da-61560cde22f2
-d1 = construct_tree()
-
-# ╔═╡ ee22329b-c144-4618-b53e-e12328b90fe8
-@drawsvg begin
-	background("white")
-	sethue("black")
-	for d in d1
-		w = sample_point(d.word)
-		pt = Point(280*real(w), 280*imag(w))
-		circle(pt, 0.2, action = :fill)
-	end
-	#sethue("red")
-	#ellipse(Point(0,0), 280*sqrt((2-sqrt(3))),280*sqrt((2-sqrt(3))),action = :stroke)
-end
+  ╠═╡ =#
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
+CurveFit = "5a033b19-8c74-5913-a970-47c3779ef25c"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Luxor = "ae8d54c2-7ccd-5906-9d76-62fc9837b5bc"
-SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
+Markdown = "d6f4376e-aef5-505a-96c1-9c027394607a"
 
 [compat]
+CurveFit = "~0.6.0"
 Luxor = "~3.8.0"
 """
 
@@ -274,7 +124,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.9.4"
 manifest_format = "2.0"
-project_hash = "7eb0d528d7e3d4b3f6f19b5aeae05e9769835318"
+project_hash = "6d894fe75b39f26b212d8e626c6bd4f2d858daac"
 
 [[deps.ArgTools]]
 uuid = "0dad84c5-d112-42e6-8d28-ef12dabb789f"
@@ -288,9 +138,9 @@ uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
 
 [[deps.Bzip2_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "19a35467a82e236ff51bc17a3a44b69ef35185a2"
+git-tree-sha1 = "9e2a6b69137e6969bab0152632dcb3bc108c8bdd"
 uuid = "6e34b625-4abd-537c-b88f-471c36dfa7a0"
-version = "1.0.8+0"
+version = "1.0.8+1"
 
 [[deps.Cairo]]
 deps = ["Cairo_jll", "Colors", "Glib_jll", "Graphics", "Libdl", "Pango_jll"]
@@ -317,10 +167,10 @@ uuid = "5ae59095-9a9b-59fe-a467-6f913c188581"
 version = "0.12.10"
 
 [[deps.Compat]]
-deps = ["UUIDs"]
-git-tree-sha1 = "886826d76ea9e72b35fcd000e535588f7b60f21d"
+deps = ["TOML", "UUIDs"]
+git-tree-sha1 = "c955881e3c981181362ae4088b35995446298b80"
 uuid = "34da2185-b29b-5c13-b0c7-acf172513d20"
-version = "4.10.1"
+version = "4.14.0"
 weakdeps = ["Dates", "LinearAlgebra"]
 
     [deps.Compat.extensions]
@@ -331,11 +181,31 @@ deps = ["Artifacts", "Libdl"]
 uuid = "e66e0078-7015-5450-92f7-15fbd957f2ae"
 version = "1.0.5+0"
 
+[[deps.ConstructionBase]]
+deps = ["LinearAlgebra"]
+git-tree-sha1 = "c53fc348ca4d40d7b371e71fd52251839080cbc9"
+uuid = "187b0558-2788-49d3-abe0-74a17ed4e7c9"
+version = "1.5.4"
+
+    [deps.ConstructionBase.extensions]
+    ConstructionBaseIntervalSetsExt = "IntervalSets"
+    ConstructionBaseStaticArraysExt = "StaticArrays"
+
+    [deps.ConstructionBase.weakdeps]
+    IntervalSets = "8197267c-284f-5f27-9208-e0e47529a953"
+    StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
+
+[[deps.CurveFit]]
+deps = ["LinearAlgebra", "Polynomials"]
+git-tree-sha1 = "9e6f6f6057c5a52566252ebceac0eef9c09ad33c"
+uuid = "5a033b19-8c74-5913-a970-47c3779ef25c"
+version = "0.6.0"
+
 [[deps.DataStructures]]
 deps = ["Compat", "InteractiveUtils", "OrderedCollections"]
-git-tree-sha1 = "3dbd312d370723b6bb43ba9d02fc36abade4518d"
+git-tree-sha1 = "0f4b5d62a88d8f59003e43c25a8a90de9eb76317"
 uuid = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
-version = "0.18.15"
+version = "0.18.18"
 
 [[deps.Dates]]
 deps = ["Printf"]
@@ -366,9 +236,9 @@ version = "4.4.4+1"
 
 [[deps.FileIO]]
 deps = ["Pkg", "Requires", "UUIDs"]
-git-tree-sha1 = "299dc33549f68299137e51e6d49a13b5b1da9673"
+git-tree-sha1 = "c5c28c245101bd59154f649e19b038d15901b5dc"
 uuid = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"
-version = "1.16.1"
+version = "1.16.2"
 
 [[deps.FileWatching]]
 uuid = "7b1f6079-737a-58dc-b8bc-7a2ca5c1b5ee"
@@ -396,6 +266,10 @@ deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
 git-tree-sha1 = "aa31987c2ba8704e23c6c8ba8a4f769d5d7e4f91"
 uuid = "559328eb-81f9-559d-9380-de523a88c83c"
 version = "1.0.10+0"
+
+[[deps.Future]]
+deps = ["Random"]
+uuid = "9fa8497b-333b-5362-9e8d-4d0656e87820"
 
 [[deps.Gettext_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "JLLWrappers", "Libdl", "Libiconv_jll", "Pkg", "XML2_jll"]
@@ -439,9 +313,9 @@ version = "1.5.0"
 
 [[deps.JpegTurbo_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
-git-tree-sha1 = "60b1194df0a3298f460063de985eae7b01bc011a"
+git-tree-sha1 = "3336abae9a713d2210bb57ab484b1e065edd7d23"
 uuid = "aacddb02-875f-59d6-b918-886e6ef4fbf8"
-version = "3.0.1+0"
+version = "3.0.2+0"
 
 [[deps.Juno]]
 deps = ["Base64", "Logging", "Media", "Profile"]
@@ -462,10 +336,10 @@ uuid = "88015f11-f218-50d7-93a8-a6af411a945d"
 version = "3.0.0+1"
 
 [[deps.LLVMOpenMP_jll]]
-deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "f689897ccbe049adb19a065c495e75f372ecd42b"
+deps = ["Artifacts", "JLLWrappers", "Libdl"]
+git-tree-sha1 = "d986ce2d884d49126836ea94ed5bfb0f12679713"
 uuid = "1d63c593-3942-5779-bab2-d838dc0a180e"
-version = "15.0.4+0"
+version = "15.0.7+0"
 
 [[deps.LZO_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -537,16 +411,16 @@ uuid = "925c91fb-5dd6-59dd-8e8c-345e74382d89"
 version = "2.54.5+0"
 
 [[deps.Libtiff_jll]]
-deps = ["Artifacts", "JLLWrappers", "JpegTurbo_jll", "LERC_jll", "Libdl", "Pkg", "Zlib_jll", "Zstd_jll"]
-git-tree-sha1 = "3eb79b0ca5764d4799c06699573fd8f533259713"
+deps = ["Artifacts", "JLLWrappers", "JpegTurbo_jll", "LERC_jll", "Libdl", "XZ_jll", "Zlib_jll", "Zstd_jll"]
+git-tree-sha1 = "6355fb9a4d22d867318db186fd09b09b35bd2ed7"
 uuid = "89763e89-9b03-5906-acba-b20f662cd828"
-version = "4.4.0+0"
+version = "4.6.0+0"
 
 [[deps.Libuuid_jll]]
-deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "7f3efec06033682db852f8b3bc3c1d2b0a0ab066"
+deps = ["Artifacts", "JLLWrappers", "Libdl"]
+git-tree-sha1 = "e5edc369a598dfde567269dc6add5812cfa10cd5"
 uuid = "38a345b3-de98-5d2b-a5d3-14cd9215e700"
-version = "2.36.0+0"
+version = "2.39.3+0"
 
 [[deps.LinearAlgebra]]
 deps = ["Libdl", "OpenBLAS_jll", "libblastrampoline_jll"]
@@ -563,9 +437,9 @@ version = "3.8.0"
 
 [[deps.MacroTools]]
 deps = ["Markdown", "Random"]
-git-tree-sha1 = "9ee1618cbf5240e6d4e0371d6f24065083f60c48"
+git-tree-sha1 = "2fa9ee3e63fd3a4f7a9a4f4744a52f4856de82df"
 uuid = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
-version = "0.5.11"
+version = "0.5.13"
 
 [[deps.Markdown]]
 deps = ["Base64"]
@@ -614,9 +488,9 @@ version = "0.8.1+0"
 
 [[deps.OpenSSL_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
-git-tree-sha1 = "cc6e1927ac521b659af340e0ca45828a3ffc748f"
+git-tree-sha1 = "60e3045590bd104a16fefb12836c00c0ef8c7f8c"
 uuid = "458c3c95-2e84-50aa-8efc-19380b2a3a95"
-version = "3.0.12+0"
+version = "3.0.13+0"
 
 [[deps.Opus_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -651,6 +525,24 @@ deps = ["Artifacts", "Dates", "Downloads", "FileWatching", "LibGit2", "Libdl", "
 uuid = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 version = "1.9.2"
 
+[[deps.Polynomials]]
+deps = ["LinearAlgebra", "RecipesBase", "Setfield", "SparseArrays"]
+git-tree-sha1 = "a9c7a523d5ed375be3983db190f6a5874ae9286d"
+uuid = "f27b6e38-b328-58d1-80ce-0feddd5e7a45"
+version = "4.0.6"
+
+    [deps.Polynomials.extensions]
+    PolynomialsChainRulesCoreExt = "ChainRulesCore"
+    PolynomialsFFTWExt = "FFTW"
+    PolynomialsMakieCoreExt = "MakieCore"
+    PolynomialsMutableArithmeticsExt = "MutableArithmetics"
+
+    [deps.Polynomials.weakdeps]
+    ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
+    FFTW = "7a1cc6ca-52ef-59f5-83cd-3a7055c09341"
+    MakieCore = "20f20a25-4f0e-4fdf-b5d1-57303727442b"
+    MutableArithmetics = "d8a4904e-b15c-11e9-3269-09a3773c0cb0"
+
 [[deps.PrecompileTools]]
 deps = ["Preferences"]
 git-tree-sha1 = "03b4c25b43cb84cee5c90aa9b5ea0a78fd848d2f"
@@ -659,9 +551,9 @@ version = "1.2.0"
 
 [[deps.Preferences]]
 deps = ["TOML"]
-git-tree-sha1 = "00805cd429dcb4870060ff49ef443486c262e38e"
+git-tree-sha1 = "9306f6085165d270f7e3db02af26a400d580f5c6"
 uuid = "21216c6a-2e73-6563-6e65-726566657250"
-version = "1.4.1"
+version = "1.4.3"
 
 [[deps.Printf]]
 deps = ["Unicode"]
@@ -678,6 +570,12 @@ uuid = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
 [[deps.Random]]
 deps = ["SHA", "Serialization"]
 uuid = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+
+[[deps.RecipesBase]]
+deps = ["PrecompileTools"]
+git-tree-sha1 = "5c3d09cc4f31f5fc6af001c250bf1278733100ff"
+uuid = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
+version = "1.3.4"
 
 [[deps.Reexport]]
 git-tree-sha1 = "45e428421666073eab6f2da5c9d310d99bb12f9b"
@@ -703,12 +601,23 @@ version = "0.7.0"
 [[deps.Serialization]]
 uuid = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
 
+[[deps.Setfield]]
+deps = ["ConstructionBase", "Future", "MacroTools", "StaticArraysCore"]
+git-tree-sha1 = "e2cc6d8c88613c05e1defb55170bf5ff211fbeac"
+uuid = "efcf1570-3423-57d1-acb7-fd33fddbac46"
+version = "1.1.1"
+
 [[deps.Sockets]]
 uuid = "6462fe0b-24de-5631-8697-dd941f90decc"
 
 [[deps.SparseArrays]]
 deps = ["Libdl", "LinearAlgebra", "Random", "Serialization", "SuiteSparse_jll"]
 uuid = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
+
+[[deps.StaticArraysCore]]
+git-tree-sha1 = "36b3d696ce6366023a0ea192b4cd442268995a0d"
+uuid = "1e83bf80-4336-4d27-bf5d-d5a4f845583c"
+version = "1.4.2"
 
 [[deps.Statistics]]
 deps = ["LinearAlgebra", "SparseArrays"]
@@ -743,15 +652,21 @@ uuid = "4ec0a83e-493e-50e2-b9ac-8f72acf5a8f5"
 
 [[deps.XML2_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Libiconv_jll", "Zlib_jll"]
-git-tree-sha1 = "801cbe47eae69adc50f36c3caec4758d2650741b"
+git-tree-sha1 = "07e470dabc5a6a4254ffebc29a1b3fc01464e105"
 uuid = "02c8fc9c-b97f-50b9-bbe4-9be30ff0a78a"
-version = "2.12.2+0"
+version = "2.12.5+0"
 
 [[deps.XSLT_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Libgcrypt_jll", "Libgpg_error_jll", "Libiconv_jll", "Pkg", "XML2_jll", "Zlib_jll"]
 git-tree-sha1 = "91844873c4085240b95e795f692c4cec4d805f8a"
 uuid = "aed1982a-8fda-507f-9586-7b0439959a61"
 version = "1.1.34+0"
+
+[[deps.XZ_jll]]
+deps = ["Artifacts", "JLLWrappers", "Libdl"]
+git-tree-sha1 = "37195dcb94a5970397ad425b95a9a26d0befce3a"
+uuid = "ffd25f8a-64ca-5728-b0f7-c24cf3aae800"
+version = "5.6.0+0"
 
 [[deps.Xorg_libX11_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Xorg_libxcb_jll", "Xorg_xtrans_jll"]
@@ -813,10 +728,10 @@ uuid = "3161d3a3-bdf6-5164-811a-617609db77b4"
 version = "1.5.5+0"
 
 [[deps.gdk_pixbuf_jll]]
-deps = ["Artifacts", "Glib_jll", "JLLWrappers", "JpegTurbo_jll", "Libdl", "Libtiff_jll", "Pkg", "Xorg_libX11_jll", "libpng_jll"]
-git-tree-sha1 = "e9190f9fb03f9c3b15b9fb0c380b0d57a3c8ea39"
+deps = ["Artifacts", "Glib_jll", "JLLWrappers", "JpegTurbo_jll", "Libdl", "Libtiff_jll", "Xorg_libX11_jll", "libpng_jll"]
+git-tree-sha1 = "86e7731be08b12fa5e741f719603ae740e16b666"
 uuid = "da03df04-f53b-5353-a52f-6a8b0620ced0"
-version = "2.42.8+0"
+version = "2.42.10+0"
 
 [[deps.libaom_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -843,9 +758,9 @@ version = "2.0.2+0"
 
 [[deps.libpng_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Zlib_jll"]
-git-tree-sha1 = "93284c28274d9e75218a416c65ec49d0e0fcdf3d"
+git-tree-sha1 = "1ea2ebe8ffa31f9c324e8c1d6e86b4165b84a024"
 uuid = "b53b4c65-9356-5827-b1ea-8c7a1a84506f"
-version = "1.6.40+0"
+version = "1.6.43+0"
 
 [[deps.libvorbis_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Ogg_jll", "Pkg"]
@@ -877,42 +792,23 @@ version = "3.5.0+0"
 """
 
 # ╔═╡ Cell order:
-# ╠═ec15aafa-fb76-4004-9102-7cebe68c93d1
-# ╠═8a20d044-42ac-4614-89aa-a06c4af1e83f
-# ╠═1980d986-1a94-4c45-b8c6-feb4399df123
-# ╠═4d3a4271-4394-4a94-a516-cff6b3675297
-# ╠═f63f6a13-a315-4887-897a-7559e35d17e9
-# ╠═2139ffed-dba3-433e-ae66-6c15948b36f9
-# ╠═d0ce22ea-6e8f-4815-84c5-2cb21994bf6c
-# ╠═c1fb52eb-f5fe-4ec5-b9d8-6b08b3fe7a16
-# ╠═32f127fb-cbf5-4667-92dc-610193e2b655
-# ╠═b8febb46-522e-42da-8d7b-0d54d27249bb
-# ╠═0c0e9037-99b0-4ea6-adae-110d4ee17b3b
-# ╠═23ed120c-452b-4d95-9ff7-ef347bc11c0d
-# ╠═1fd4a0f3-2f69-4fcf-87d4-2c940edae987
-# ╠═8b8d0b26-5255-46e6-97da-b82faa282128
-# ╠═452f4307-9a14-420f-b0c0-cf90f22370b2
-# ╠═51752925-ecb0-472d-b124-784cb49f6772
-# ╠═6c3ef2cd-f08b-448e-a9ee-62c3fb02dd65
-# ╠═0d72c245-2c83-4933-920e-8c5c3ea05dea
-# ╠═e1f8c861-4545-4694-81f6-a49c757d73dd
-# ╠═32c1fb88-fc70-46aa-8c11-0e5ba921849c
-# ╠═9e0b0873-2781-43ee-8f3a-14a69f2d0d03
-# ╠═fab98970-cd5e-47cd-a083-ce9c391deb6c
-# ╠═c4cb2d62-e407-441c-929f-eef11f3facb6
-# ╠═dcf16831-3f44-4a9c-a9ae-8533630025b4
-# ╠═e214345a-0e18-464c-96f7-30d270903698
-# ╠═420ba9aa-2b9a-418c-a7ad-39480bcfb778
-# ╠═0eb0b961-9682-42f7-96a9-c10f3aee3006
-# ╠═fb2847f5-c40c-4102-a63e-05d68b771231
-# ╠═3e587d05-8791-4c8d-84df-88e6b3f888f4
-# ╠═beffc494-2e0c-4051-9853-729224e3f41b
-# ╠═c53c707b-5584-4269-9b59-85dac2bea60b
-# ╠═966e4a3e-e84c-4732-9264-22e0302e35a9
-# ╠═5080b2f3-5329-40a5-be94-52ae9364a9d2
-# ╠═41803ad7-5ed3-402d-a8d9-75e80b0382e8
-# ╠═bf8ba11c-c87a-42e1-8b79-590b513959a7
-# ╠═9313da20-a4d6-47cd-96da-61560cde22f2
-# ╠═ee22329b-c144-4618-b53e-e12328b90fe8
+# ╠═e29dd721-b05a-4956-821c-7bfb50f4c833
+# ╠═6aae1c1f-6d3a-4856-b206-4168cb817aff
+# ╠═1f431876-a98c-47a7-a5c9-e14275d34441
+# ╠═fa98cb28-753f-4d42-b7b8-c4853d4976d9
+# ╠═b90f4960-ef11-499c-b15c-211af4259f41
+# ╠═87ad8994-75f4-402a-81b4-e9f835981d46
+# ╠═7a4cdfff-5d18-454f-989f-6c823855ffe1
+# ╠═36afb35e-5080-4bf3-9359-6fdb3f499980
+# ╠═fc0166cb-b746-4d5c-ab0c-2b1eb0515786
+# ╠═66f711e0-ba3f-40a3-ac7f-134ddc58af39
+# ╠═4d5bda96-f750-4fbd-a9c3-783a8106e97f
+# ╠═3cc82a8c-9c30-475b-b3a5-be3be2c85e72
+# ╠═8696e29c-d3aa-41ad-b1c5-77724a5b6ff7
+# ╠═387263d7-e0ab-4a59-9b4f-e0718026c232
+# ╠═6b28f57c-39dd-4b55-8cf1-fd0abda740e0
+# ╠═e0d32f53-0aa1-4f54-857b-3fa3d3b05b08
+# ╠═3b966d4f-47d1-4aac-b6b0-03d6e3948a9c
+# ╠═dfa426d6-639c-426e-815c-f54c2ba2a7e2
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002

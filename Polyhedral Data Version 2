@@ -4,265 +4,378 @@
 using Markdown
 using InteractiveUtils
 
-# ╔═╡ ec15aafa-fb76-4004-9102-7cebe68c93d1
-using LinearAlgebra
-
-# ╔═╡ 8a20d044-42ac-4614-89aa-a06c4af1e83f
-using SparseArrays
-
-# ╔═╡ 1980d986-1a94-4c45-b8c6-feb4399df123
+# ╔═╡ 3926d55c-f2ae-11ee-1116-397d061c8be4
 using Luxor
 
-# ╔═╡ 4d3a4271-4394-4a94-a516-cff6b3675297
-struct Node
-	tuple
-	children
-	word
-	valid
-end
-
-# ╔═╡ f63f6a13-a315-4887-897a-7559e35d17e9
-numbers = Dict()
-
-# ╔═╡ 2139ffed-dba3-433e-ae66-6c15948b36f9
-whole_tree = Dict()
-
-# ╔═╡ b8febb46-522e-42da-8d7b-0d54d27249bb
-point_list = [0, 0+0.5im, -1*sqrt(3)/4-0.25im, sqrt(3)/4-0.25im]
-
-# ╔═╡ 0c0e9037-99b0-4ea6-adae-110d4ee17b3b
-gen1 = stack([[-1.,2.,2.,2.],[0,1.,0,0],[0,0,1.,0],[0,0,0,1.]],dims=1)
-
-# ╔═╡ 23ed120c-452b-4d95-9ff7-ef347bc11c0d
-gen2 = stack([[1.,0,0,0],[2.,-1.,2.,2.],[0,0,1.,0],[0,0,0,1.]],dims=1)
-
-# ╔═╡ 1fd4a0f3-2f69-4fcf-87d4-2c940edae987
-gen3 = stack([[1.,0,0,0],[0,1.,0,0],[2.,2.,-1.,2.],[0,0,0,1.]],dims=1)
-
-# ╔═╡ 8b8d0b26-5255-46e6-97da-b82faa282128
-gen4 = stack([[1.,0,0,0],[0,1.,0,0],[0,0,1.,0],[2.,2.,2.,-1.]],dims=1)
-
-# ╔═╡ 32f127fb-cbf5-4667-92dc-610193e2b655
-gen_list = [gen1, gen2, gen3, gen4]
-
-# ╔═╡ 452f4307-9a14-420f-b0c0-cf90f22370b2
-function func1(z)
-	return conj((2 - sqrt(3))^2 / z)
-end
-
-# ╔═╡ 51752925-ecb0-472d-b124-784cb49f6772
-function func2(z)
-	return 2im + conj(3 / (z - 2im))
-end
-
-# ╔═╡ 6c3ef2cd-f08b-448e-a9ee-62c3fb02dd65
-function func3(z)
-	return -1*sqrt(3) - 1im + conj(3 / (z + sqrt(3) + 1im))
-end
-
-# ╔═╡ 0d72c245-2c83-4933-920e-8c5c3ea05dea
-function func4(z)
-	return sqrt(3) - 1im + conj(3 / (z - sqrt(3) + 1im))
-end
-
-# ╔═╡ d0ce22ea-6e8f-4815-84c5-2cb21994bf6c
-func_list = [func1, func2, func3, func4]
-
-# ╔═╡ e1f8c861-4545-4694-81f6-a49c757d73dd
-function der1(z)
-	return abs(z^2 / (2 - sqrt(3))^2)
-end
-
-# ╔═╡ 32c1fb88-fc70-46aa-8c11-0e5ba921849c
-function der2(z)
-	return abs((z - 2im)^2 / 3)
-end
-
-# ╔═╡ 9e0b0873-2781-43ee-8f3a-14a69f2d0d03
-function der3(z)
-	return abs((z + sqrt(3) + 1im)^2 / 3)
-end
-
-# ╔═╡ fab98970-cd5e-47cd-a083-ce9c391deb6c
-function der4(z)
-	return abs((z - sqrt(3) + 1im)^2 / 3)
-end
-
-# ╔═╡ c1fb52eb-f5fe-4ec5-b9d8-6b08b3fe7a16
-der_list = [der1, der2, der3, der4]
-
-# ╔═╡ c4cb2d62-e407-441c-929f-eef11f3facb6
-"maps the starting sample points to their images under the given set of generators"
-function sample_point(word)
-	p = point_list[last(word)]
-    for letter in reverse(word)[2:end]
-        p = func_list[letter](p)
+# ╔═╡ 0579c83d-80bf-47ee-a353-7ed87491decf
+"transforms a circle configuration with two parallel horizontal lines into a configuration inside the unit circle"
+function rescale(circles)
+	s=1
+	for v in circles
+		if v[2]==0&&v[3]==0&&v[4]==1
+			s=v[1]/2
+		end
 	end
-    return p
+	return [[[0.5,1.5,-0.5,0] [.5,0.5,.5,0] [0,0,0,1] [1,0,0,0]]*[[1/s,0,0,0] [0,s,0,0] [0,0,1,0] [0,0,0,1]]*v for v in circles]
 end
 
-# ╔═╡ dcf16831-3f44-4a9c-a9ae-8533630025b4
-"determines the value of f'_i(y_{ij})"
-function sample_value(word)
-	return der_list[word[1]](sample_point(word))
+# ╔═╡ 73b53253-0cd6-47cb-bbda-35a911eb2f0d
+"transforms a circle configuration with two parallel vertical lines into a configuration with two parallel horizontal lines"
+function reflect_xy(circles)
+	return [[[1,0,0,0] [0,1,0,0] [0,0,0,1] [0,0,1,0]]*v for v in circles]
 end
 
-# ╔═╡ e214345a-0e18-464c-96f7-30d270903698
-"determines if a tuple has too large of a dual curvature"
-function kill(tuple,g)
-	temp = deleteat!(tuple,g)
-	return sqrt(temp[1]*temp[2] + temp[1]*temp[3] + temp[2]*temp[3]) < dual_curvature
-end
+# ╔═╡ 9ae748c6-364b-46cb-bc6c-99ef49404608
+"This is the data tabulated by Chait, Cui, and Stier, for polyhedra with at most seven vertices and at most seven edges."
 
-# ╔═╡ 420ba9aa-2b9a-418c-a7ad-39480bcfb778
-"if a node is currently a leaf, attempts to generate its children"
-function spawn(leaf)
-	if !leaf.valid
-		return leaf
+# ╔═╡ e3247b0a-4415-4ec7-b1bc-b48f3d3a60e5
+tetrahedron=rescale([[4,1,2,1],[0,1,0,1],[4,0,0,1],[0,0,0,-1]])
+
+# ╔═╡ ba4e5de0-d9ce-4e9f-8d1d-95cf77fb2428
+square_pyramid=rescale([[4,2,2sqrt(2),1],[8,1,2sqrt(2),1],[4,0,0,1],[0,1,0,1],[0,0,0,-1]])
+
+# ╔═╡ aa7f9fe4-b619-4a64-9e9e-939e9efe1622
+triangular_bipyramid=rescale([[64,1,4,7],[16,1/4,2,1],[0,1/4,0,1],[16,0,0,1],[0,0,0,-1]])
+
+# ╔═╡ c6328a59-8a33-43b7-8cc5-06f7b3341f35
+triangular_prism=rescale(reflect_xy([[32,1/2,1,4],[48,1/2,3,4],[0,1/4,1,0],[32,3/4,3,4],[0,0,-1,0],[16,0,1,0]]))
+
+# ╔═╡ e47d1d00-d91b-4017-8390-eb33e29c9f08
+sixv6f1=rescale([[2(-1+sqrt(5)),1,sqrt(2(-1+sqrt(5))),1],[6-2sqrt(5),2+sqrt(5),sqrt(2(1+sqrt(5))),1],[0,1/2*(3+sqrt(5)),0,1],[2(-1+sqrt(5)),1/2*(1+sqrt(5)),0,sqrt(5)],[4,0,0,1],[0,0,0,-1]])
+
+# ╔═╡ 10ab269b-bd9c-45e5-9df3-e5b8336cbee9
+pentagonal_pyramid=rescale([[0,1,0,1],[4,1/2*(3+sqrt(5)),1+sqrt(5),1],[6+2sqrt(5),1/2*(3+sqrt(5)),3+sqrt(5),1],[6+2sqrt(5),1,1+sqrt(5),1],[4,0,0,1],[0,0,0,-1]])
+
+# ╔═╡ 135471ef-1f1a-4ab9-9255-fb407b69f702
+sixv7f1=rescale([[4,1,2,1],[8,3+2sqrt(2),2(2+sqrt(2)),1],[4,3+2sqrt(2),2(1+sqrt(2)),1],[0,1,0,1],[4,0,0,1],[0,0,0,-1]])
+
+# ╔═╡ 3f746620-425a-4c8b-b109-cd40ce2ae0a6
+sixv7f1_dual=rescale(reflect_xy([[4sqrt(2),1+sqrt(2),1+2sqrt(2),0],[4sqrt(2),3+2sqrt(2),3+2sqrt(2),0],[0,1+sqrt(2),1,0],[4,1,1,2],[2sqrt(2),1+sqrt(2),1+sqrt(2),sqrt(2)],[0,0,-1,0],[4,0,1,0]]))
+
+# ╔═╡ a18265a3-beba-4a87-bada-5c4861307d8d
+sixv7f2=rescale([[0,1,0,1],[4,3,2sqrt(3),1],[12,4,4sqrt(3),1],[16/3,4/3,4/sqrt(3),5/3],[4,0,0,1],[0,0,0,-1]])
+
+# ╔═╡ 47f4e250-31a4-49bb-a360-27e5133a9d00
+sixv7f2_dual=rescale(reflect_xy([[0,sqrt(3),1,0],[4sqrt(3),2sqrt(3),5,0],[20/sqrt(3),8/sqrt(3),7,4/sqrt(3)],[8/sqrt(3),2/sqrt(3),1,4/sqrt(3)],[8/sqrt(3),5/sqrt(3),3,4/sqrt(3)],[0,0,-1,0],[2sqrt(3),0,1,0]]))
+
+# ╔═╡ 8c21631e-be96-4404-8128-8fe3fe1cb9cb
+octahedron=rescale([[16,1,2sqrt(2),3],[16,1/2,2sqrt(2),1],[8,1,2sqrt(2),1],[0,1/2,0,1],[8,0,0,1],[0,0,0,-1]])
+
+# ╔═╡ 9c15f375-e7f5-4064-8b41-02c6577c58c1
+cube=rescale(reflect_xy([[16sqrt(2),sqrt(2),5,2sqrt(2)],[8sqrt(2),1/sqrt(2),1,2sqrt(2)],[8sqrt(2),sqrt(2),3,2sqrt(2)],[0,1/sqrt(2),1,0],[8sqrt(2),1/sqrt(2),3,0],[16sqrt(2),1/sqrt(2),3,2sqrt(2)],[0,0,-1,0],[8sqrt(2),0,1,0]]))
+
+# ╔═╡ acb3773e-b129-43ee-8be9-bcbcfd09a5c8
+sevenv7f1=rescale([[8,1,0,3],[0,1,0,1],[4,1+1/sqrt(2),sqrt(2(2+sqrt(2))),1],[2(2+sqrt(2)),1/2+1/sqrt(2),sqrt(2+sqrt(2)),1+sqrt(2)],[12+8sqrt(2),1+1/sqrt(2),sqrt(2(2+sqrt(2))),3+2sqrt(2)],[8,0,0,1],[0,0,0,-1]])
+
+# ╔═╡ d0241818-2930-4816-9e28-3b5bf4c7ddab
+sevenv7f1_dual=rescale(reflect_xy([[0,1.306562965,1.000000000,0],[5.226251860,2.230442497,2.414213562,2.613125930],[7.391036260,1.847759065,1.000000000,3.695518130],[20.00832438,2.230442497,2.414213562,6.308644060],[20.90500744,1.306562965,1.000000000,5.226251860],[0,0,-1.000000000,0],[3.061467459,0,1.000000000,0]]))
+
+# ╔═╡ c0a312da-47bb-4b45-9a07-f6b6956a76f4
+sevenv7f2=rescale([[16,1,2sqrt(2+sqrt(2)),-1+2sqrt(2)],[0,1/(2sqrt(2)),0,1],[16(1+sqrt(2)),1+3/(2sqrt(2)),2sqrt(10+7sqrt(2)),1],[24(2+sqrt(2)),2+sqrt(2),1/382*(2035+sqrt(17610545)),1+2sqrt(2)],[8(1+sqrt(2)),1/(2sqrt(2)),sqrt(2(2+sqrt(2))),1],[8sqrt(2),0,0,1],[0,0,0,-1]])
+
+# ╔═╡ a4689cf8-8719-4f3d-a915-f517206a6f31
+sevenv7f2_dual=rescale(reflect_xy([[8.65914,0.270598,1.,1.53073],[20.905,0.653281,3.82843,0.],[71.3742,3.53701,15.4853,3.69552],[56.5921,2.23044,10.6569,3.69552],[0.,0.46194,1.,0.],[0.,0.,-1.,0.],[14.7821,0.,1.,0.]]))
+
+# ╔═╡ ac07d696-0f15-451d-b19e-8a7ebbcaf36f
+sevenv7f3=rescale([[0,1,0,1],[4,3,2sqrt(3),1],[12,4,4sqrt(3),1],[16/3,4/3,4/sqrt(3),5/3],[4,0,0,1],[0,0,0,-1]])
+
+# ╔═╡ d2b4347a-f22d-45d8-89ce-2389842f484a
+sevenv7f3_dual=rescale(reflect_xy([[14+6sqrt(5),1,2+sqrt(5),1+sqrt(5)],[4(2+sqrt(5)),-2+sqrt(5),1,2],[0,(3-sqrt(5))/2,1,0],[14+6sqrt(5),(-1+sqrt(5))/2,2+sqrt(5),0],[8(2+sqrt(5)),(-1+sqrt(5))/2,2+sqrt(5),2],[0,0,-1,0],[4(2+sqrt(5)),0,1,0]]))
+
+# ╔═╡ 8eeedddf-d5fa-498a-91be-4c5761276f98
+sevenv7f4=rescale([[240,1,4,15],[48,1/4,2,3],[16,1/4,2,1],[0,1/4,0,1],[32,1/4,0,3],[32,0,0,1],[0,0,0,-1]])
+
+# ╔═╡ 66cdf3c3-7784-4b8c-82bd-0956c5cdede1
+sevenv7f4_dual=rescale(reflect_xy([[128,1/2,1,8],[144,1/2,3,8],[0,1/4,1,0],[16,1/4,1,2],[144,3/4,3,10],[16,0,1,0],[0,0,-1,0]]))
+
+# ╔═╡ 90283744-0365-4a92-8ebb-33959e6585a2
+sevenv7f5=rescale([[243.972,1.,8.96427,12.8302],[0.,0.113375,0.,1.],[35.2811,0.269865,3.08563,1.],[83.9787,0.372488,4.25903,3.76056],[146.577,0.411513,4.70524,6.25932],[35.2811,0.,0.,1.],[0.,0.,0.,-1.]])
+
+# ╔═╡ c62ad603-e832-4015-bf07-feb337c27973
+sevenv7f5_dual=rescale(reflect_xy([[261.837,0.968135,10.0696,12.3732],[54.4322,0.174917,1.,3.08563],[0.,0.174917,1.,0.],[143.138,0.726701,6.25932,8.11415],[54.4322,0.416351,3.76056,3.08563],[0.,0.,-1.,0.],[22.868,0.,1.,0.]]))
+
+# ╔═╡ d134a3b1-2eec-4518-aa8e-76ebc4b757d4
+sevenv7f6=rescale([[0.,1.,0.,1.],[4.,4.0796,4.0396,1.],[5.29887,2.0796,3.04941,1.64944],[12.3184,2.32472,5.35133,1.],[12.3184,1.75488,4.0396,2.50976],[4.,0.,0.,1.],[0.,0.,0.,-1.]])
+
+# ╔═╡ 3334d8ab-c84b-4d2f-953f-364a715d742a
+sevenv7f6_dual=rescale(reflect_xy([[4.60386,3.82663,3.64944,2.30193],[3.47535,0.868837,1.,1.73767],[16.8015,3.5445,7.15919,3.04941],[3.47535,1.5247,2.50976,0.],[0.,2.0198,1.,0.],[0.,0.,-1.,0.],[4.60386,0.,1.,0]]))
+
+# ╔═╡ 28ada76f-82c4-447c-a243-e17074e3cfde
+sevenv7f7=rescale([[72+48sqrt(2),1,2sqrt(2(2+sqrt(2))),5+4sqrt(2)],[6(2+sqrt(2)),1/(3sqrt(2)),0,1+sqrt(2)],[0,1/3,0,1],[12,(2-sqrt(2))/3,2sqrt(2-sqrt(2)),1],[48+36sqrt(2),sqrt(2)/3,2sqrt(2+sqrt(2)),3+2sqrt(2)],[12(1+sqrt(2)),0,0,1],[0,0,0,-1]])
+
+# ╔═╡ 4a5644c9-32b9-48c4-b3d3-6c9ccce8d6a6
+sevenv7f7_dual=rescale(reflect_xy([[53.5306,0.255122,1.,3.69552],[69.2094,0.690643,3.,6.30864],[15.6788,0.435521,1.,2.61313],[0.,0.255122,1.,0.],[129.234,0.871042,5.82843,8.92177],[0.,0.,-1.,0.],[15.6788,0.,1.,0.]]))
+
+# ╔═╡ e75976d3-82ce-4320-9ac5-fe7f91d24b98
+hexagonal_pyramid=rescale([[12,1,2sqrt(3),1],[16,3,4sqrt(3),1],[12,4,4sqrt(3),1],[4,3,2sqrt(3),1],[0,1,0,1],[4,0,0,1],[0,0,0,-1]])
+
+# ╔═╡ 80fa56c4-5bd1-4f1f-86e0-3875946c5842
+"Here is an illustration of each circle configuration."
+
+# ╔═╡ 20bc5edd-e082-460d-bb0f-d99bc23b56a9
+function draw_circle(v)
+	if v[1]!=0
+		circle(300*v[3]/v[1], 300*v[4]/v[1], 300/abs(v[1]), :stroke)
 	else
-		for g in 1:4
-			if length(leaf.word) == 0 || g != last(leaf.word)
-				child_word = push!(copy(leaf.word),g)
-				child = Node(gen_list[g]*leaf.tuple, [], child_word, kill(gen_list[g]*leaf.tuple,g))
-				push!(leaf.children, child)
-				whole_tree[join(child_word)] = child
-			end
-		end
+		rule(Point(150*v[2]*v[3], 150*v[2]*v[4]), atan(v[3],-v[4]))
 	end
-	return leaf
 end
 
-# ╔═╡ 0eb0b961-9682-42f7-96a9-c10f3aee3006
-function find_leaves(node)
-	current = [node]
-	new = []
-	while length(current) > 0
-		leaf = pop!(current)
-		if !leaf.valid
-			push!(new,leaf)
-		else 
-			for child in leaf.children
-				push!(current, child)
-			end
-		end
+# ╔═╡ e77bd8a1-9d25-446e-bc1c-5d7ff09226bc
+function label(v)
+	if v[1]>0
+		text(string(v[1]), 300*v[3]/abs(v[1]), 300*v[4]/abs(v[1]), halign=:center, valign=:center)
 	end
-	return new
 end
 
-# ╔═╡ fb2847f5-c40c-4102-a63e-05d68b771231
-"generates the tree"
-function construct_tree()
-	root = Node([-1., 2+sqrt(3), 2+sqrt(3), 2+sqrt(3)],[],[],true)
-	current_leaves = [root]
-	new_leaves = []
-	while length(current_leaves)>0
-		leaf = pop!(current_leaves)
-		if !leaf.valid
-			push!(new_leaves, leaf)
+# ╔═╡ c5c0247f-8ab0-42a8-aa6e-3b945e131b2c
+@svg begin
+	for v in tetrahedron
+		draw_circle(v)
+		label(v)
+	end
+end
+
+# ╔═╡ f90560cb-dbd8-4729-bbc0-4d7b768d6fac
+@svg begin
+	for v in square_pyramid
+		draw_circle(v)
+		label(v)
+	end
+end
+
+# ╔═╡ a8aa7fdf-7f09-49b0-b188-4b5574c4471b
+@svg begin
+	for v in triangular_bipyramid
+		draw_circle(v)
+		label(v)
+	end
+end
+
+# ╔═╡ ce73be8a-b250-45a9-9323-6b1b2bb6d86e
+@svg begin
+	for v in triangular_prism
+		draw_circle(v)
+		label(v)
+	end
+end
+
+# ╔═╡ a0260142-6f7c-43e2-ba09-3803056da682
+@svg begin
+	for v in sixv6f1
+		draw_circle(v)
+		label(v)
+	end
+end
+
+# ╔═╡ 20a64b5f-12e1-4e1a-b8fb-c780c8a94cab
+@svg begin
+	for v in pentagonal_pyramid
+		draw_circle(v)
+		label(v)
+	end
+end
+
+# ╔═╡ 20e4c6a4-3258-4526-8b2b-689c062d7778
+@svg begin
+	for v in sixv7f1
+		draw_circle(v)
+		label(v)
+	end
+end
+
+# ╔═╡ 02466ef4-0866-4aad-9b27-e056c2eb53d2
+@svg begin
+	for v in sixv7f1_dual
+		draw_circle(v)
+		label(v)
+	end
+end
+
+# ╔═╡ 4d179fc9-e8a3-4f4a-96e0-0e11d09992f3
+@svg begin
+	for v in sixv7f2
+		draw_circle(v)
+		label(v)
+	end
+end
+
+# ╔═╡ 3dd8ed5e-d78b-45eb-88e5-6bb0cad186c7
+@svg begin
+	for v in sixv7f2_dual
+		draw_circle(v)
+		label(v)
+	end
+end
+
+# ╔═╡ 2ababbd4-6c48-4e41-a6a8-72494da83e57
+@svg begin
+	for v in octahedron
+		draw_circle(v)
+		label(v)
+	end
+end
+
+# ╔═╡ 87ac2d25-af58-477e-96a5-b35c1cffe2fb
+@svg begin
+	for v in cube
+		draw_circle(v)
+		label(v)
+	end
+end
+
+# ╔═╡ 5652930c-b61b-4d14-80b4-eab9f3e7fd2b
+@svg begin
+	for v in sevenv7f1
+		draw_circle(v)
+		label(v)
+	end
+end
+
+# ╔═╡ 4c4746fc-3f5d-483a-9c6e-402f35d2c9c5
+@svg begin
+	for v in sevenv7f1_dual
+		draw_circle(v)
+		label(v)
+	end
+end
+
+# ╔═╡ 77b50339-5979-4d49-9c9a-e743f6872017
+@svg begin
+	for v in sevenv7f2
+		draw_circle(v)
+		label(v)
+	end
+end
+
+# ╔═╡ 030f6aac-b5b9-48be-8c37-10beb5fb876a
+@svg begin
+	for v in sevenv7f2_dual
+		draw_circle(v)
+		label(v)
+	end
+end
+
+# ╔═╡ 57696027-3f94-4417-b4de-55e8f5930d22
+@svg begin
+	for v in sevenv7f3
+		draw_circle(v)
+		label(v)
+	end
+end
+
+# ╔═╡ 83a02c18-1a12-4178-9955-0e1af91bee73
+@svg begin
+	for v in sevenv7f3_dual
+		draw_circle(v)
+		label(v)
+	end
+end
+
+# ╔═╡ d97ddc7e-c2df-42c2-ad4d-a77e262d850d
+@svg begin
+	for v in sevenv7f4
+		draw_circle(v)
+		label(v)
+	end
+end
+
+# ╔═╡ be41cc03-b8d3-48bc-a423-6cfb9c21114d
+@svg begin
+	for v in sevenv7f4_dual
+		draw_circle(v)
+		label(v)
+	end
+end
+
+# ╔═╡ 6259f514-3231-483a-943a-b7f481ae6133
+@svg begin
+	for v in sevenv7f5
+		draw_circle(v)
+		label(v)
+	end
+end
+
+# ╔═╡ f8463766-f563-4e80-953b-21707f6860ba
+@svg begin
+	for v in sevenv7f5_dual
+		draw_circle(v)
+		label(v)
+	end
+end
+
+# ╔═╡ 741f8dff-07d2-4624-a9f9-ccb9cd922ea8
+@svg begin
+	for v in sevenv7f6
+		draw_circle(v)
+		label(v)
+	end
+end
+
+# ╔═╡ 365999ef-9ab2-48b5-a40d-9caecae3ebe6
+@svg begin
+	for v in sevenv7f6_dual
+		draw_circle(v)
+		label(v)
+	end
+end
+
+# ╔═╡ f59e5d12-2d02-4ec1-ab02-56c006f8203d
+@svg begin
+	for v in sevenv7f7
+		draw_circle(v)
+		label(v)
+	end
+end
+
+# ╔═╡ 479bb6a6-9415-472a-aaa1-a16d1f45b978
+@svg begin
+	for v in sevenv7f7_dual
+		draw_circle(v)
+		label(v)
+	end
+end
+
+# ╔═╡ f01a7a26-3d92-42d9-afc2-3afe761eb291
+@svg begin
+	for v in hexagonal_pyramid
+		draw_circle(v)
+		label(v)
+	end
+end
+
+# ╔═╡ c469ce24-0b02-4369-aacc-0cce548359fa
+"For reformatting data copied from Mathematica"
+function convert_to_matrix(string)
+	str="[["
+	for i in 1:length(string)
+		if string[i]==' '
+		elseif string[i]=='['
+			str=str*"("
+		elseif string[i]==']'
+			str=str*")"
+		elseif string[i]=='S'
+			str=str*"s"
+		elseif string[i]=='\t'
+			str=str*","
+		elseif string[i]=='\n'
+			str=str*"],["
+		elseif string[i]=='{'
+			str=str*"["
+		elseif string[i]=='}'
+			str=str*"]"
 		else
-			leaf = spawn(leaf)
-			for child in leaf.children
-				push!(current_leaves, child)
-			end
+			str=str*string[i]
 		end
 	end
-	for (i,node) in enumerate(new_leaves)
-		numbers[join(node.word)] = i
-	end
-	return new_leaves
-end
-
-# ╔═╡ 3e587d05-8791-4c8d-84df-88e6b3f888f4
-"generates the data for the transition matrix"
-function construct_data()
-	data = construct_tree()
-	col = []
-	row = []
-	nonzero = []
-	for (i,node) in enumerate(data)
-		sample = whole_tree[join(node.word[2:end])]
-		for leaf in find_leaves(sample)
-			push!(row, i)
-			push!(col, numbers[join(leaf.word)])
-			push!(nonzero, sample_value(leaf.word))
-		end
-	end
-	return col, row, nonzero, length(data)
-end
-
-# ╔═╡ beffc494-2e0c-4051-9853-729224e3f41b
-function secant(x0,y0,x1,y1,z)
-	return x0 - (y0-z) * ((x1-x0)/(y1-y0))
-end
-
-# ╔═╡ c53c707b-5584-4269-9b59-85dac2bea60b
-function power_method22(col,row,data,l,a)
-	matr = sparse(col, row, data.^a)
-    vec = ones(l)
-    previous_entry = vec[1]
-    previous_val = 0
-    current = matr * vec
-    current_val = current[1] / previous_entry
-    count = 0
-    while count < 1000 && abs(current_val - previous_val) > 1e-5
-        previous_val = current_val
-        previous_entry = current[1]
-        current = matr * current
-        current_val = current[1] / previous_entry
-        count += 1
-	end
-    return current_val
-end
-
-# ╔═╡ 966e4a3e-e84c-4732-9264-22e0302e35a9
-function secant_method2(col,row,data,l,z,x1,x2,e,its)
-	k1 = x1
-	k2 = x2
-	y1 = power_method(col,row,data,l,k1)
-	y2 = power_method(col,row,data,l,k2)
-	count = 1
-	while abs(y1-z)>e && count<its
-		k3 = secant(k1,y1,k2,y2,z)
-		k1 = k2
-		y1 = y2
-		k2 = k3
-		y2 = power_method(col,row,data,l,k2)
-		count += 1
-	end
-	return count,k1,y1
-end
-
-# ╔═╡ 5080b2f3-5329-40a5-be94-52ae9364a9d2
-dual_curvature = 200
-
-# ╔═╡ 41803ad7-5ed3-402d-a8d9-75e80b0382e8
-col, row, data, l = construct_data()
-
-# ╔═╡ bf8ba11c-c87a-42e1-8b79-590b513959a7
-secant()
-
-# ╔═╡ 9313da20-a4d6-47cd-96da-61560cde22f2
-d1 = construct_tree()
-
-# ╔═╡ ee22329b-c144-4618-b53e-e12328b90fe8
-@drawsvg begin
-	background("white")
-	sethue("black")
-	for d in d1
-		w = sample_point(d.word)
-		pt = Point(280*real(w), 280*imag(w))
-		circle(pt, 0.2, action = :fill)
-	end
-	#sethue("red")
-	#ellipse(Point(0,0), 280*sqrt((2-sqrt(3))),280*sqrt((2-sqrt(3))),action = :stroke)
+	str=str*"]]"
+	return str
 end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
-LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Luxor = "ae8d54c2-7ccd-5906-9d76-62fc9837b5bc"
-SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 
 [compat]
 Luxor = "~3.8.0"
@@ -272,9 +385,9 @@ Luxor = "~3.8.0"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.9.4"
+julia_version = "1.10.0"
 manifest_format = "2.0"
-project_hash = "7eb0d528d7e3d4b3f6f19b5aeae05e9769835318"
+project_hash = "fcac3d4ae530321b609832702d21ffd4863fff29"
 
 [[deps.ArgTools]]
 uuid = "0dad84c5-d112-42e6-8d28-ef12dabb789f"
@@ -288,9 +401,9 @@ uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
 
 [[deps.Bzip2_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "19a35467a82e236ff51bc17a3a44b69ef35185a2"
+git-tree-sha1 = "9e2a6b69137e6969bab0152632dcb3bc108c8bdd"
 uuid = "6e34b625-4abd-537c-b88f-471c36dfa7a0"
-version = "1.0.8+0"
+version = "1.0.8+1"
 
 [[deps.Cairo]]
 deps = ["Cairo_jll", "Colors", "Glib_jll", "Graphics", "Libdl", "Pango_jll"]
@@ -317,10 +430,10 @@ uuid = "5ae59095-9a9b-59fe-a467-6f913c188581"
 version = "0.12.10"
 
 [[deps.Compat]]
-deps = ["UUIDs"]
-git-tree-sha1 = "886826d76ea9e72b35fcd000e535588f7b60f21d"
+deps = ["TOML", "UUIDs"]
+git-tree-sha1 = "75bd5b6fc5089df449b5d35fa501c846c9b6549b"
 uuid = "34da2185-b29b-5c13-b0c7-acf172513d20"
-version = "4.10.1"
+version = "4.12.0"
 weakdeps = ["Dates", "LinearAlgebra"]
 
     [deps.Compat.extensions]
@@ -329,13 +442,13 @@ weakdeps = ["Dates", "LinearAlgebra"]
 [[deps.CompilerSupportLibraries_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "e66e0078-7015-5450-92f7-15fbd957f2ae"
-version = "1.0.5+0"
+version = "1.0.5+1"
 
 [[deps.DataStructures]]
 deps = ["Compat", "InteractiveUtils", "OrderedCollections"]
-git-tree-sha1 = "3dbd312d370723b6bb43ba9d02fc36abade4518d"
+git-tree-sha1 = "ac67408d9ddf207de5cfa9a97e114352430f01ed"
 uuid = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
-version = "0.18.15"
+version = "0.18.16"
 
 [[deps.Dates]]
 deps = ["Printf"]
@@ -366,9 +479,9 @@ version = "4.4.4+1"
 
 [[deps.FileIO]]
 deps = ["Pkg", "Requires", "UUIDs"]
-git-tree-sha1 = "299dc33549f68299137e51e6d49a13b5b1da9673"
+git-tree-sha1 = "c5c28c245101bd59154f649e19b038d15901b5dc"
 uuid = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"
-version = "1.16.1"
+version = "1.16.2"
 
 [[deps.FileWatching]]
 uuid = "7b1f6079-737a-58dc-b8bc-7a2ca5c1b5ee"
@@ -462,10 +575,10 @@ uuid = "88015f11-f218-50d7-93a8-a6af411a945d"
 version = "3.0.0+1"
 
 [[deps.LLVMOpenMP_jll]]
-deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "f689897ccbe049adb19a065c495e75f372ecd42b"
+deps = ["Artifacts", "JLLWrappers", "Libdl"]
+git-tree-sha1 = "d986ce2d884d49126836ea94ed5bfb0f12679713"
 uuid = "1d63c593-3942-5779-bab2-d838dc0a180e"
-version = "15.0.4+0"
+version = "15.0.7+0"
 
 [[deps.LZO_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -489,8 +602,13 @@ uuid = "deac9b47-8bc7-5906-a0fe-35ac56dc84c0"
 version = "8.4.0+0"
 
 [[deps.LibGit2]]
-deps = ["Base64", "NetworkOptions", "Printf", "SHA"]
+deps = ["Base64", "LibGit2_jll", "NetworkOptions", "Printf", "SHA"]
 uuid = "76f85450-5226-5b5a-8eaa-529ad045b433"
+
+[[deps.LibGit2_jll]]
+deps = ["Artifacts", "LibSSH2_jll", "Libdl", "MbedTLS_jll"]
+uuid = "e37daf67-58a4-590a-8e99-b0245dd2ffc5"
+version = "1.6.4+0"
 
 [[deps.LibSSH2_jll]]
 deps = ["Artifacts", "Libdl", "MbedTLS_jll"]
@@ -537,10 +655,10 @@ uuid = "925c91fb-5dd6-59dd-8e8c-345e74382d89"
 version = "2.54.5+0"
 
 [[deps.Libtiff_jll]]
-deps = ["Artifacts", "JLLWrappers", "JpegTurbo_jll", "LERC_jll", "Libdl", "Pkg", "Zlib_jll", "Zstd_jll"]
-git-tree-sha1 = "3eb79b0ca5764d4799c06699573fd8f533259713"
+deps = ["Artifacts", "JLLWrappers", "JpegTurbo_jll", "LERC_jll", "Libdl", "XZ_jll", "Zlib_jll", "Zstd_jll"]
+git-tree-sha1 = "6355fb9a4d22d867318db186fd09b09b35bd2ed7"
 uuid = "89763e89-9b03-5906-acba-b20f662cd828"
-version = "4.4.0+0"
+version = "4.6.0+0"
 
 [[deps.Libuuid_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -563,9 +681,9 @@ version = "3.8.0"
 
 [[deps.MacroTools]]
 deps = ["Markdown", "Random"]
-git-tree-sha1 = "9ee1618cbf5240e6d4e0371d6f24065083f60c48"
+git-tree-sha1 = "2fa9ee3e63fd3a4f7a9a4f4744a52f4856de82df"
 uuid = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
-version = "0.5.11"
+version = "0.5.13"
 
 [[deps.Markdown]]
 deps = ["Base64"]
@@ -574,7 +692,7 @@ uuid = "d6f4376e-aef5-505a-96c1-9c027394607a"
 [[deps.MbedTLS_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "c8ffd9c3-330d-5841-b78e-0817d7145fa1"
-version = "2.28.2+0"
+version = "2.28.2+1"
 
 [[deps.Media]]
 deps = ["MacroTools", "Test"]
@@ -584,7 +702,7 @@ version = "0.5.0"
 
 [[deps.MozillaCACerts_jll]]
 uuid = "14a3606d-f60d-562e-9121-12d972cd8159"
-version = "2022.10.11"
+version = "2023.1.10"
 
 [[deps.NaNMath]]
 deps = ["OpenLibm_jll"]
@@ -605,18 +723,18 @@ version = "1.3.5+1"
 [[deps.OpenBLAS_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "Libdl"]
 uuid = "4536629a-c528-5b80-bd46-f80d51c5b363"
-version = "0.3.21+4"
+version = "0.3.23+2"
 
 [[deps.OpenLibm_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "05823500-19ac-5b8b-9628-191a04bc5112"
-version = "0.8.1+0"
+version = "0.8.1+2"
 
 [[deps.OpenSSL_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
-git-tree-sha1 = "cc6e1927ac521b659af340e0ca45828a3ffc748f"
+git-tree-sha1 = "60e3045590bd104a16fefb12836c00c0ef8c7f8c"
 uuid = "458c3c95-2e84-50aa-8efc-19380b2a3a95"
-version = "3.0.12+0"
+version = "3.0.13+0"
 
 [[deps.Opus_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -632,7 +750,7 @@ version = "1.6.3"
 [[deps.PCRE2_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "efcefdf7-47ab-520b-bdef-62a2eaa19f15"
-version = "10.42.0+0"
+version = "10.42.0+1"
 
 [[deps.Pango_jll]]
 deps = ["Artifacts", "Cairo_jll", "Fontconfig_jll", "FreeType2_jll", "FriBidi_jll", "Glib_jll", "HarfBuzz_jll", "JLLWrappers", "Libdl"]
@@ -649,7 +767,7 @@ version = "0.42.2+0"
 [[deps.Pkg]]
 deps = ["Artifacts", "Dates", "Downloads", "FileWatching", "LibGit2", "Libdl", "Logging", "Markdown", "Printf", "REPL", "Random", "SHA", "Serialization", "TOML", "Tar", "UUIDs", "p7zip_jll"]
 uuid = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
-version = "1.9.2"
+version = "1.10.0"
 
 [[deps.PrecompileTools]]
 deps = ["Preferences"]
@@ -676,7 +794,7 @@ deps = ["InteractiveUtils", "Markdown", "Sockets", "Unicode"]
 uuid = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
 
 [[deps.Random]]
-deps = ["SHA", "Serialization"]
+deps = ["SHA"]
 uuid = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 
 [[deps.Reexport]]
@@ -709,16 +827,17 @@ uuid = "6462fe0b-24de-5631-8697-dd941f90decc"
 [[deps.SparseArrays]]
 deps = ["Libdl", "LinearAlgebra", "Random", "Serialization", "SuiteSparse_jll"]
 uuid = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
+version = "1.10.0"
 
 [[deps.Statistics]]
 deps = ["LinearAlgebra", "SparseArrays"]
 uuid = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
-version = "1.9.0"
+version = "1.10.0"
 
 [[deps.SuiteSparse_jll]]
-deps = ["Artifacts", "Libdl", "Pkg", "libblastrampoline_jll"]
+deps = ["Artifacts", "Libdl", "libblastrampoline_jll"]
 uuid = "bea87d4a-7f5b-5778-9afe-8cc45184846c"
-version = "5.10.1+6"
+version = "7.2.1+1"
 
 [[deps.TOML]]
 deps = ["Dates"]
@@ -752,6 +871,12 @@ deps = ["Artifacts", "JLLWrappers", "Libdl", "Libgcrypt_jll", "Libgpg_error_jll"
 git-tree-sha1 = "91844873c4085240b95e795f692c4cec4d805f8a"
 uuid = "aed1982a-8fda-507f-9586-7b0439959a61"
 version = "1.1.34+0"
+
+[[deps.XZ_jll]]
+deps = ["Artifacts", "JLLWrappers", "Libdl"]
+git-tree-sha1 = "522b8414d40c4cbbab8dee346ac3a09f9768f25d"
+uuid = "ffd25f8a-64ca-5728-b0f7-c24cf3aae800"
+version = "5.4.5+0"
 
 [[deps.Xorg_libX11_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Xorg_libxcb_jll", "Xorg_xtrans_jll"]
@@ -804,7 +929,7 @@ version = "1.5.0+0"
 [[deps.Zlib_jll]]
 deps = ["Libdl"]
 uuid = "83775a58-1f1d-513f-b197-d71354ab007a"
-version = "1.2.13+0"
+version = "1.2.13+1"
 
 [[deps.Zstd_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
@@ -813,10 +938,10 @@ uuid = "3161d3a3-bdf6-5164-811a-617609db77b4"
 version = "1.5.5+0"
 
 [[deps.gdk_pixbuf_jll]]
-deps = ["Artifacts", "Glib_jll", "JLLWrappers", "JpegTurbo_jll", "Libdl", "Libtiff_jll", "Pkg", "Xorg_libX11_jll", "libpng_jll"]
-git-tree-sha1 = "e9190f9fb03f9c3b15b9fb0c380b0d57a3c8ea39"
+deps = ["Artifacts", "Glib_jll", "JLLWrappers", "JpegTurbo_jll", "Libdl", "Libtiff_jll", "Xorg_libX11_jll", "libpng_jll"]
+git-tree-sha1 = "86e7731be08b12fa5e741f719603ae740e16b666"
 uuid = "da03df04-f53b-5353-a52f-6a8b0620ced0"
-version = "2.42.8+0"
+version = "2.42.10+0"
 
 [[deps.libaom_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -833,7 +958,7 @@ version = "0.15.1+0"
 [[deps.libblastrampoline_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "8e850b90-86db-534c-a0d3-1478176c7d93"
-version = "5.8.0+0"
+version = "5.8.0+1"
 
 [[deps.libfdk_aac_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -843,9 +968,9 @@ version = "2.0.2+0"
 
 [[deps.libpng_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Zlib_jll"]
-git-tree-sha1 = "93284c28274d9e75218a416c65ec49d0e0fcdf3d"
+git-tree-sha1 = "873b4f805771d3e4bafe63af759a26ea8ca84d14"
 uuid = "b53b4c65-9356-5827-b1ea-8c7a1a84506f"
-version = "1.6.40+0"
+version = "1.6.42+0"
 
 [[deps.libvorbis_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Ogg_jll", "Pkg"]
@@ -861,7 +986,7 @@ version = "1.52.0+1"
 [[deps.p7zip_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
-version = "17.4.0+0"
+version = "17.4.0+2"
 
 [[deps.x264_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -877,42 +1002,67 @@ version = "3.5.0+0"
 """
 
 # ╔═╡ Cell order:
-# ╠═ec15aafa-fb76-4004-9102-7cebe68c93d1
-# ╠═8a20d044-42ac-4614-89aa-a06c4af1e83f
-# ╠═1980d986-1a94-4c45-b8c6-feb4399df123
-# ╠═4d3a4271-4394-4a94-a516-cff6b3675297
-# ╠═f63f6a13-a315-4887-897a-7559e35d17e9
-# ╠═2139ffed-dba3-433e-ae66-6c15948b36f9
-# ╠═d0ce22ea-6e8f-4815-84c5-2cb21994bf6c
-# ╠═c1fb52eb-f5fe-4ec5-b9d8-6b08b3fe7a16
-# ╠═32f127fb-cbf5-4667-92dc-610193e2b655
-# ╠═b8febb46-522e-42da-8d7b-0d54d27249bb
-# ╠═0c0e9037-99b0-4ea6-adae-110d4ee17b3b
-# ╠═23ed120c-452b-4d95-9ff7-ef347bc11c0d
-# ╠═1fd4a0f3-2f69-4fcf-87d4-2c940edae987
-# ╠═8b8d0b26-5255-46e6-97da-b82faa282128
-# ╠═452f4307-9a14-420f-b0c0-cf90f22370b2
-# ╠═51752925-ecb0-472d-b124-784cb49f6772
-# ╠═6c3ef2cd-f08b-448e-a9ee-62c3fb02dd65
-# ╠═0d72c245-2c83-4933-920e-8c5c3ea05dea
-# ╠═e1f8c861-4545-4694-81f6-a49c757d73dd
-# ╠═32c1fb88-fc70-46aa-8c11-0e5ba921849c
-# ╠═9e0b0873-2781-43ee-8f3a-14a69f2d0d03
-# ╠═fab98970-cd5e-47cd-a083-ce9c391deb6c
-# ╠═c4cb2d62-e407-441c-929f-eef11f3facb6
-# ╠═dcf16831-3f44-4a9c-a9ae-8533630025b4
-# ╠═e214345a-0e18-464c-96f7-30d270903698
-# ╠═420ba9aa-2b9a-418c-a7ad-39480bcfb778
-# ╠═0eb0b961-9682-42f7-96a9-c10f3aee3006
-# ╠═fb2847f5-c40c-4102-a63e-05d68b771231
-# ╠═3e587d05-8791-4c8d-84df-88e6b3f888f4
-# ╠═beffc494-2e0c-4051-9853-729224e3f41b
-# ╠═c53c707b-5584-4269-9b59-85dac2bea60b
-# ╠═966e4a3e-e84c-4732-9264-22e0302e35a9
-# ╠═5080b2f3-5329-40a5-be94-52ae9364a9d2
-# ╠═41803ad7-5ed3-402d-a8d9-75e80b0382e8
-# ╠═bf8ba11c-c87a-42e1-8b79-590b513959a7
-# ╠═9313da20-a4d6-47cd-96da-61560cde22f2
-# ╠═ee22329b-c144-4618-b53e-e12328b90fe8
+# ╠═3926d55c-f2ae-11ee-1116-397d061c8be4
+# ╠═0579c83d-80bf-47ee-a353-7ed87491decf
+# ╠═73b53253-0cd6-47cb-bbda-35a911eb2f0d
+# ╠═9ae748c6-364b-46cb-bc6c-99ef49404608
+# ╠═e3247b0a-4415-4ec7-b1bc-b48f3d3a60e5
+# ╠═ba4e5de0-d9ce-4e9f-8d1d-95cf77fb2428
+# ╠═aa7f9fe4-b619-4a64-9e9e-939e9efe1622
+# ╠═c6328a59-8a33-43b7-8cc5-06f7b3341f35
+# ╠═e47d1d00-d91b-4017-8390-eb33e29c9f08
+# ╠═10ab269b-bd9c-45e5-9df3-e5b8336cbee9
+# ╠═135471ef-1f1a-4ab9-9255-fb407b69f702
+# ╠═3f746620-425a-4c8b-b109-cd40ce2ae0a6
+# ╠═a18265a3-beba-4a87-bada-5c4861307d8d
+# ╠═47f4e250-31a4-49bb-a360-27e5133a9d00
+# ╠═8c21631e-be96-4404-8128-8fe3fe1cb9cb
+# ╠═9c15f375-e7f5-4064-8b41-02c6577c58c1
+# ╠═acb3773e-b129-43ee-8be9-bcbcfd09a5c8
+# ╠═d0241818-2930-4816-9e28-3b5bf4c7ddab
+# ╠═c0a312da-47bb-4b45-9a07-f6b6956a76f4
+# ╠═a4689cf8-8719-4f3d-a915-f517206a6f31
+# ╠═ac07d696-0f15-451d-b19e-8a7ebbcaf36f
+# ╠═d2b4347a-f22d-45d8-89ce-2389842f484a
+# ╠═8eeedddf-d5fa-498a-91be-4c5761276f98
+# ╠═66cdf3c3-7784-4b8c-82bd-0956c5cdede1
+# ╠═90283744-0365-4a92-8ebb-33959e6585a2
+# ╠═c62ad603-e832-4015-bf07-feb337c27973
+# ╠═d134a3b1-2eec-4518-aa8e-76ebc4b757d4
+# ╠═3334d8ab-c84b-4d2f-953f-364a715d742a
+# ╠═28ada76f-82c4-447c-a243-e17074e3cfde
+# ╠═4a5644c9-32b9-48c4-b3d3-6c9ccce8d6a6
+# ╠═e75976d3-82ce-4320-9ac5-fe7f91d24b98
+# ╠═80fa56c4-5bd1-4f1f-86e0-3875946c5842
+# ╠═20bc5edd-e082-460d-bb0f-d99bc23b56a9
+# ╠═e77bd8a1-9d25-446e-bc1c-5d7ff09226bc
+# ╠═c5c0247f-8ab0-42a8-aa6e-3b945e131b2c
+# ╠═f90560cb-dbd8-4729-bbc0-4d7b768d6fac
+# ╠═a8aa7fdf-7f09-49b0-b188-4b5574c4471b
+# ╠═ce73be8a-b250-45a9-9323-6b1b2bb6d86e
+# ╠═a0260142-6f7c-43e2-ba09-3803056da682
+# ╠═20a64b5f-12e1-4e1a-b8fb-c780c8a94cab
+# ╠═20e4c6a4-3258-4526-8b2b-689c062d7778
+# ╠═02466ef4-0866-4aad-9b27-e056c2eb53d2
+# ╠═4d179fc9-e8a3-4f4a-96e0-0e11d09992f3
+# ╠═3dd8ed5e-d78b-45eb-88e5-6bb0cad186c7
+# ╠═2ababbd4-6c48-4e41-a6a8-72494da83e57
+# ╠═87ac2d25-af58-477e-96a5-b35c1cffe2fb
+# ╠═5652930c-b61b-4d14-80b4-eab9f3e7fd2b
+# ╠═4c4746fc-3f5d-483a-9c6e-402f35d2c9c5
+# ╠═77b50339-5979-4d49-9c9a-e743f6872017
+# ╠═030f6aac-b5b9-48be-8c37-10beb5fb876a
+# ╠═57696027-3f94-4417-b4de-55e8f5930d22
+# ╠═83a02c18-1a12-4178-9955-0e1af91bee73
+# ╠═d97ddc7e-c2df-42c2-ad4d-a77e262d850d
+# ╠═be41cc03-b8d3-48bc-a423-6cfb9c21114d
+# ╠═6259f514-3231-483a-943a-b7f481ae6133
+# ╠═f8463766-f563-4e80-953b-21707f6860ba
+# ╠═741f8dff-07d2-4624-a9f9-ccb9cd922ea8
+# ╠═365999ef-9ab2-48b5-a40d-9caecae3ebe6
+# ╠═f59e5d12-2d02-4ec1-ab02-56c006f8203d
+# ╠═479bb6a6-9415-472a-aaa1-a16d1f45b978
+# ╠═f01a7a26-3d92-42d9-afc2-3afe761eb291
+# ╠═c469ce24-0b02-4369-aacc-0cce548359fa
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
